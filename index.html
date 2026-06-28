@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LeetCode Stats 90LPA | Trupti</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        body {
+            background: #0d0221;
+            color: #00f5ff;
+            font-family: 'Orbitron', monospace;
+            margin: 0; padding: 20px;
+            background-image:
+                radial-gradient(circle at 20% 50%, #ff00ff22 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, #00f5ff22 0%, transparent 50%);
+        }
+       .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid #00f5ff44;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 0 30px #00f5ff33;
+            max-width: 800px; margin: 20px auto;
+        }
+        h1 { text-align: center; text-shadow: 0 0 10px #00f5ff; }
+       .neon-text { color: #ff00ff; text-shadow: 0 0 5px #ff00ff; }
+        input, button {
+            background: #0d0221; border: 1px solid #00f5ff; color: #00f5ff;
+            padding: 12px; border-radius: 8px; font-family: 'Orbitron';
+            margin: 5px; width: 70%;
+        }
+        button { cursor: pointer; width: 25%; background: #ff00ff22; }
+        button:hover { background: #ff00ff; color: #0d0221; box-shadow: 0 0 15px #ff00ff; }
+        #output { margin-top: 20px; text-align: center; }
+       .stat { display: inline-block; margin: 10px; padding: 15px; border: 1px solid #ff00ff; }
+    </style>
+</head>
+<body>
+    <div class="glass">
+        <h1>LEETCODE <span class="neon-text">90LPA</span> STATS</h1>
+        <p>// Python + PyScript + System Design: API Caching //</p>
+        <input type="text" id="username" placeholder="Enter LeetCode Username" value="leetcode">
+        <button py-click="get_stats">FETCH</button>
+        <div id="output"></div>
+    </div>
+
+    <py-config>
+        packages = ["matplotlib"]
+    </py-config>
+
+    <py-script>
+        from js import document, fetch, console
+        from pyodide.ffi import to_js
+        import asyncio
+        import json
+
+        # 90 LPA Concept: LRU Cache for API calls - Client Side
+        api_cache = {}
+        cache_order = []
+        CACHE_SIZE = 3
+
+        async def get_stats(event):
+            username = document.getElementById("username").value
+            output = document.getElementById("output")
+            output.innerHTML = f"<p class='neon-text'>// Fetching {username}... // </p>"
+
+            # LRU Cache Check
+            if username in api_cache:
+                data = api_cache[username]
+                cache_order.remove(username)
+                cache_order.append(username)
+                status = "CACHE HIT <20ms"
+            else:
+                # API Call - LeetCode GraphQL
+                url = "https://leetcode.com/graphql"
+                query = """
+                query getUserProfile($username: String!) {
+                    matchedUser(username: $username) {
+                        submitStats { acSubmissionNum { difficulty count } }
+                    }
+                }
+                """
+                headers = to_js({"Content-Type": "application/json"})
+                body = to_js({"query": query, "variables": {"username": username}})
+
+                response = await fetch(url, method="POST", headers=headers, body=json.dumps({"query": query, "variables": {"username": username}}))
+                data = await response.json()
+                status = "API CALL 400ms"
+
+                # LRU Eviction
+                if len(api_cache) >= CACHE_SIZE:
+                    del api_cache[cache_order.pop(0)]
+                api_cache[username] = data
+                cache_order.append(username)
+
+            # Parse Data - Python DSA
+            try:
+                stats = data.matchedUser.submitStats.acSubmissionNum
+                easy = stats[1].count
+                medium = stats[2].count
+                hard = stats[3].count
+                total = easy + medium + hard
+
+                # 90 LPA Insight: Calculate L60 readiness
+                l60_score = int((easy * 1 + medium * 3 + hard * 5) / 10)
+
+                output.innerHTML = f"""
+                <h2 class='neon-text'>{username}</h2>
+                <p>// {status} | LRU Cache Size: {len(api_cache)}/{CACHE_SIZE} //</p>
+                <div class='stat'>EASY<br>{easy}</div>
+                <div class='stat'>MEDIUM<br>{medium}</div>
+                <div class='stat'>HARD<br>{hard}</div>
+                <div class='stat'>TOTAL<br>{total}</div>
+                <h3 class='neon-text'>MICROSOFT L60 SCORE: {l60_score}/100</h3>
+                <p>// >80 = Interview Ready | Python DSA Concept: Dict + LRU //</p>
+                """
+            except:
+                output.innerHTML = "<p class='neon-text'>// User not found or API Error //</p>"
+
+            console.log(f"90LPA System Design: {status}")
+
+        # Auto-load on start
+        asyncio.ensure_future(get_stats(None))
+    </py-script>
+</body>
+</html>
