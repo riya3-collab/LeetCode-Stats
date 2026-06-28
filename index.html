@@ -52,13 +52,12 @@
         packages = ["matplotlib"]
     </py-config>
 
-    <py-script>
+       <py-script>
         from js import document, fetch, console
         from pyodide.ffi import to_js
         import asyncio
         import json
 
-        # 90 LPA Concept: LRU Cache for API calls - Client Side
         api_cache = {}
         cache_order = []
         CACHE_SIZE = 3
@@ -66,16 +65,15 @@
         async def get_stats(event):
             username = document.getElementById("username").value
             output = document.getElementById("output")
-            output.innerHTML = f"<p class='neon-text'>// Fetching {username}... // </p>"
+            # FIXED LINE: Single quotes for f-string, double quotes inside HTML
+            output.innerHTML = f'<p class="neon-text">// Fetching {username}... // </p>'
 
-            # LRU Cache Check
             if username in api_cache:
                 data = api_cache[username]
                 cache_order.remove(username)
                 cache_order.append(username)
                 status = "CACHE HIT <20ms"
             else:
-                # API Call - LeetCode GraphQL
                 url = "https://leetcode.com/graphql"
                 query = """
                 query getUserProfile($username: String!) {
@@ -85,46 +83,42 @@
                 }
                 """
                 headers = to_js({"Content-Type": "application/json"})
-                body = to_js({"query": query, "variables": {"username": username}})
+                body = json.dumps({"query": query, "variables": {"username": username}})
 
-                response = await fetch(url, method="POST", headers=headers, body=json.dumps({"query": query, "variables": {"username": username}}))
+                response = await fetch(url, method="POST", headers=headers, body=body)
                 data = await response.json()
                 status = "API CALL 400ms"
 
-                # LRU Eviction
                 if len(api_cache) >= CACHE_SIZE:
                     del api_cache[cache_order.pop(0)]
                 api_cache[username] = data
                 cache_order.append(username)
 
-            # Parse Data - Python DSA
             try:
                 stats = data.matchedUser.submitStats.acSubmissionNum
                 easy = stats[1].count
                 medium = stats[2].count
                 hard = stats[3].count
                 total = easy + medium + hard
-
-                # 90 LPA Insight: Calculate L60 readiness
                 l60_score = int((easy * 1 + medium * 3 + hard * 5) / 10)
 
-                output.innerHTML = f"""
-                <h2 class='neon-text'>{username}</h2>
+                # FIXED LINE: Triple quotes for safety
+                output.innerHTML = f'''
+                <h2 class="neon-text">{username}</h2>
                 <p>// {status} | LRU Cache Size: {len(api_cache)}/{CACHE_SIZE} //</p>
-                <div class='stat'>EASY<br>{easy}</div>
-                <div class='stat'>MEDIUM<br>{medium}</div>
-                <div class='stat'>HARD<br>{hard}</div>
-                <div class='stat'>TOTAL<br>{total}</div>
-                <h3 class='neon-text'>MICROSOFT L60 SCORE: {l60_score}/100</h3>
+                <div class="stat">EASY<br>{easy}</div>
+                <div class="stat">MEDIUM<br>{medium}</div>
+                <div class="stat">HARD<br>{hard}</div>
+                <div class="stat">TOTAL<br>{total}</div>
+                <h3 class="neon-text">MICROSOFT L60 SCORE: {l60_score}/100</h3>
                 <p>// >80 = Interview Ready | Python DSA Concept: Dict + LRU //</p>
-                """
+                '''
             except:
-                output.innerHTML = "<p class='neon-text'>// User not found or API Error //</p>"
+                output.innerHTML = '<p class="neon-text">// User not found or API Error //</p>'
 
             console.log(f"90LPA System Design: {status}")
 
-        # Auto-load on start
         asyncio.ensure_future(get_stats(None))
     </py-script>
-</body>
-</html>
+<\body>
+<\html>
